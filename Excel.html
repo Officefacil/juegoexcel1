@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Conocimientos de Excel (Avanzado)</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts for a modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom styles for the application */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* bg-gray-900 */
+        }
+
+        /* The main container for the image and the grid overlay */
+        #image-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9; /* Maintain a widescreen aspect ratio */
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 0.75rem; /* rounded-xl */
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+
+        /* The background image that will be revealed */
+        #background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://i.postimg.cc/43SXxcP5/Imagen1.jpg');
+            background-size: cover;
+            background-position: center;
+            transition: filter 0.5s ease;
+        }
+
+        /* The grid of squares that covers the image */
+        #grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            z-index: 2;
+        }
+
+        /* Individual square in the grid */
+        .grid-square {
+            background-color: #1f2937; /* bg-gray-800 */
+            border: 1px solid #374151; /* border-gray-700 */
+            transition: opacity 0.7s ease-in-out, transform 0.5s ease;
+            opacity: 1;
+        }
+
+        /* Style for a square that has been removed */
+        .grid-square.hidden {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        /* Animation for answer buttons */
+        .answer-btn {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .answer-btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="text-white flex flex-col items-center justify-center min-h-screen p-4 sm:p-6">
+
+    <div class="w-full max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-cyan-400">Descubre la Imagen Oculta</h1>
+            <p class="text-lg text-gray-400 mt-2">Responde correctamente para revelar la imagen de fondo</p>
+        </header>
+
+        <!-- Main Game Area -->
+        <main id="main-game-area" class="flex flex-col lg:flex-row gap-6">
+            
+            <!-- Left Side: Image and Grid -->
+            <div class="w-full lg:w-2/3">
+                <div id="image-container">
+                    <div id="background-image"></div>
+                    <div id="grid-overlay"></div>
+                </div>
+                <div id="progress-container" class="mt-4 w-full bg-gray-700 rounded-full h-4">
+                    <div id="progress-bar" class="bg-cyan-500 h-4 rounded-full text-xs text-center text-black font-semibold" style="width: 0%">0%</div>
+                </div>
+            </div>
+
+            <!-- Right Side: Quiz -->
+            <div id="quiz-container" class="w-full lg:w-1/3 bg-gray-800 p-6 rounded-xl shadow-lg flex flex-col justify-center">
+                <div id="timer-container" class="text-center mb-4">
+                    <div id="timer" class="text-4xl font-bold text-yellow-400">10</div>
+                </div>
+                <div id="question-area">
+                    <h2 id="question-text" class="text-xl font-semibold mb-4 h-24">Cargando pregunta...</h2>
+                    <div id="answer-buttons" class="grid grid-cols-1 gap-3">
+                        <!-- Answer buttons will be generated here by JavaScript -->
+                    </div>
+                </div>
+                <div id="feedback-area" class="mt-4 text-center font-bold text-lg h-8"></div>
+            </div>
+
+            <!-- Success End Screen -->
+            <div id="success-end-screen" class="hidden w-full lg:w-1/3 bg-gray-800 p-6 rounded-xl shadow-lg text-center flex flex-col justify-center items-center">
+                <h2 class="text-3xl font-bold text-cyan-400">¡Reto Completado!</h2>
+                <p id="final-score" class="text-xl mt-4"></p>
+                <p id="end-game-message" class="mt-2 text-gray-300"></p>
+                <button id="restart-btn-success" class="mt-6 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                    Jugar de Nuevo
+                </button>
+            </div>
+        </main>
+
+        <!-- Promo End Screen (Moved outside of main game area) -->
+        <div id="promo-end-screen" class="hidden w-full max-w-4xl bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl sm:text-3xl font-bold text-center text-yellow-400 mb-6">No completaste el reto 😥...</h2>
+            <p class="text-center text-gray-300 mb-8 text-lg">...pero no te preocupes, ¡te espero en mis cursos para que amplíes tu dominio de Excel y Power BI!</p>
+            <div class="flex flex-col md:flex-row gap-8 items-center">
+                <!-- Left Column: Image -->
+                <div class="w-full md:w-1/3">
+                    <img src="https://i.postimg.cc/FKGvCZcz/Combo-40-off-permanente.jpg" alt="Promoción de cursos de Excel y Power BI" class="rounded-lg shadow-md w-full">
+                </div>
+                <!-- Right Column: Text -->
+                <div class="w-full md:w-2/3 text-gray-300 space-y-4">
+                    <p>📊 Excel y Power BI son más que herramientas: son **superpoderes** en el mundo laboral actual.</p>
+                    <p>🧠 ¿Quieres dominar desde lo básico hasta lo avanzado en Excel? ¿Aprender a visualizar datos como un profesional con Power BI?</p>
+                    <div class="bg-gray-900 p-4 rounded-lg">
+                        <p class="font-bold text-white text-lg">💥 PROMO ESPECIAL: 40% OFF</p>
+                        <p>¡Este combo es para ti! Llévate el paquete completo:</p>
+                        <a href="https://pay.hotmart.com/I99331746U" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline font-semibold break-words">https://pay.hotmart.com/I99331746U</a>
+                    </div>
+                    <p>Si quieres comprarlos por separado, entra al enlace individual:</p>
+                    <ul class="list-none space-y-2 text-sm">
+                        <li>✅ <span class="font-semibold">Excel Básico (explorador):</span> <a href="https://go.hotmart.com/N97400718B" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline break-words">https://go.hotmart.com/N97400718B</a></li>
+                        <li>✅ <span class="font-semibold">Excel Intermedio (estratega):</span> <a href="https://go.hotmart.com/X95014046D" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline break-words">https://go.hotmart.com/X95014046D</a></li>
+                        <li>✅ <span class="font-semibold">Excel Avanzado (conquistador):</span> <a href="https://go.hotmart.com/O92491385M" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline break-words">https://go.hotmart.com/O92491385M</a></li>
+                        <li>✅ <span class="font-semibold">Power BI:</span> <a href="https://go.hotmart.com/F88449789Y" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline break-words">https://go.hotmart.com/F88449789Y</a></li>
+                    </ul>
+                </div>
+            </div>
+             <button id="restart-btn-promo" class="mt-8 mx-auto block bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-lg transition-colors">
+                Intentar de Nuevo
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM ELEMENT REFERENCES ---
+        const gridOverlay = document.getElementById('grid-overlay');
+        const questionText = document.getElementById('question-text');
+        const answerButtonsContainer = document.getElementById('answer-buttons');
+        const feedbackArea = document.getElementById('feedback-area');
+        const mainGameArea = document.getElementById('main-game-area');
+        const quizContainer = document.getElementById('quiz-container');
+        const successEndScreen = document.getElementById('success-end-screen');
+        const promoEndScreen = document.getElementById('promo-end-screen');
+        const finalScoreText = document.getElementById('final-score');
+        const restartBtnSuccess = document.getElementById('restart-btn-success');
+        const restartBtnPromo = document.getElementById('restart-btn-promo');
+        const progressBar = document.getElementById('progress-bar');
+        const timerDisplay = document.getElementById('timer');
+        const endGameMessage = document.getElementById('end-game-message');
+
+        // --- QUIZ DATA (ADVANCED) ---
+        const questions = [
+            {
+                question: "¿Qué función es más versátil para búsquedas, reemplazando a BUSCARV y BUSCARH?",
+                answers: [
+                    { text: "INDICE y COINCIDIR", correct: false },
+                    { text: "BUSCARX", correct: true },
+                    { text: "DESREF", correct: false },
+                    { text: "INDIRECTO", correct: false }
+                ]
+            },
+            {
+                question: "En Power Query, ¿qué operación combina dos tablas una debajo de la otra?",
+                answers: [
+                    { text: "Combinar Consultas", correct: false },
+                    { text: "Anexar Consultas", correct: true },
+                    { text: "Agrupar por", correct: false },
+                    { text: "Transponer", correct: false }
+                ]
+            },
+            {
+                question: "¿Cuál es el propósito de la función SUMAPRODUCTO?",
+                answers: [
+                    { text: "Sumar los productos de varias celdas", correct: false },
+                    { text: "Multiplicar matrices y sumar el resultado", correct: true },
+                    { text: "Calcular el producto de una suma", correct: false },
+                    { text: "Unir texto de varias celdas", correct: false }
+                ]
+            },
+            {
+                question: "Para crear listas desplegables dependientes, ¿qué herramienta se usa con la función INDIRECTO?",
+                answers: [
+                    { text: "Formato Condicional", correct: false },
+                    { text: "Tablas Dinámicas", correct: false },
+                    { text: "Validación de Datos", correct: true },
+                    { text: "Solver", correct: false }
+                ]
+            },
+            {
+                question: "¿Qué atajo introduce una fórmula de matriz en versiones antiguas de Excel?",
+                answers: [
+                    { text: "Enter", correct: false },
+                    { text: "Ctrl + Enter", correct: false },
+                    { text: "Ctrl + Shift + Enter", correct: true },
+                    { text: "Alt + Enter", correct: false }
+                ]
+            },
+            {
+                question: "¿Qué función DAX evalúa una expresión en un contexto de filtro modificado?",
+                answers: [
+                    { text: "FILTER()", correct: false },
+                    { text: "CALCULATE()", correct: true },
+                    { text: "RELATED()", correct: false },
+                    { text: "SUMX()", correct: false }
+                ]
+            },
+            {
+                question: "Para aplicar formato a una fila basado en el valor de una celda, se usa una regla con:",
+                answers: [
+                    { text: "Una escala de color", correct: false },
+                    { text: "Una fórmula con referencias mixtas", correct: true },
+                    { text: "Un conjunto de iconos", correct: false },
+                    { text: "La opción 'Valores duplicados'", correct: false }
+                ]
+            },
+            {
+                question: "¿Para qué sirve la herramienta 'Administrador de escenarios'?",
+                answers: [
+                    { text: "Para automatizar tareas repetitivas", correct: false },
+                    { text: "Para crear grupos de valores y ver su efecto", correct: true },
+                    { text: "Para conectar a bases de datos externas", correct: false },
+                    { text: "Para proteger un libro con contraseña", correct: false }
+                ]
+            },
+            {
+                question: "¿Qué función de Microsoft 365 permite desbordar resultados en celdas adyacentes?",
+                answers: [
+                    { text: "CONCAT", correct: false },
+                    { text: "SI.CONJUNTO", correct: false },
+                    { text: "FILTRAR", correct: true },
+                    { text: "BUSCARV", correct: false }
+                ]
+            },
+            {
+                question: "¿Qué describe mejor el 'Modelo de Datos' en Excel y Power BI?",
+                answers: [
+                    { text: "Una colección de tablas dinámicas", correct: false },
+                    { text: "Tablas con relaciones para análisis integrado", correct: true },
+                    { text: "El formato visual de una hoja", correct: false },
+                    { text: "Un conjunto de macros VBA", correct: false }
+                ]
+            }
+        ];
+
+        // --- GAME STATE VARIABLES ---
+        let shuffledQuestions, currentQuestionIndex;
+        let correctAnswersCount = 0;
+        let gridSquares = [];
+        const totalSquares = 100; // 10x10 grid
+        let timerInterval;
+        let timeLeft;
+
+        // --- FUNCTIONS ---
+
+        /**
+         * Initializes or restarts the game.
+         */
+        function startGame() {
+            correctAnswersCount = 0;
+            shuffledQuestions = questions.sort(() => Math.random() - 0.5);
+            currentQuestionIndex = 0;
+            quizContainer.classList.remove('hidden');
+            successEndScreen.classList.add('hidden');
+            promoEndScreen.classList.add('hidden');
+            // Make the main game container visible again if it was hidden
+            mainGameArea.classList.remove('hidden');
+            createGrid();
+            updateProgress();
+            setNextQuestion();
+        }
+
+        /**
+         * Creates the 10x10 grid of squares over the image.
+         */
+        function createGrid() {
+            gridOverlay.innerHTML = '';
+            gridSquares = [];
+            for (let i = 0; i < totalSquares; i++) {
+                const square = document.createElement('div');
+                square.classList.add('grid-square');
+                gridOverlay.appendChild(square);
+                gridSquares.push(square);
+            }
+        }
+
+        /**
+         * Loads the current question and its answers into the UI.
+         */
+        function setNextQuestion() {
+            resetState();
+            if (currentQuestionIndex < shuffledQuestions.length) {
+                showQuestion(shuffledQuestions[currentQuestionIndex]);
+                startTimer();
+            } else {
+                endGame();
+            }
+        }
+        
+        /**
+         * Starts the 10-second countdown for the current question.
+         */
+        function startTimer() {
+            timeLeft = 10;
+            timerDisplay.textContent = timeLeft;
+            timerDisplay.classList.remove('text-red-500');
+            timerDisplay.classList.add('text-yellow-400');
+
+            clearInterval(timerInterval); // Clear any previous timer
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+                if (timeLeft <= 3) {
+                    timerDisplay.classList.remove('text-yellow-400');
+                    timerDisplay.classList.add('text-red-500');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeUp();
+                }
+            }, 1000);
+        }
+
+        /**
+         * Handles the case when the timer runs out.
+         */
+        function handleTimeUp() {
+            feedbackArea.innerText = '¡Se acabó el tiempo!';
+            feedbackArea.classList.add('text-red-400');
+            
+            Array.from(answerButtonsContainer.children).forEach(button => {
+                button.disabled = true;
+                if (button.dataset.correct === 'true') {
+                    setStatusClass(button, true);
+                }
+            });
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                setNextQuestion();
+            }, 2000);
+        }
+
+        /**
+         * Displays a question and its answer options.
+         * @param {object} question - The question object.
+         */
+        function showQuestion(question) {
+            questionText.innerText = question.question;
+            question.answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.innerText = answer.text;
+                button.classList.add('answer-btn', 'w-full', 'text-left', 'p-3', 'rounded-lg', 'bg-gray-700', 'hover:bg-gray-600');
+                if (answer.correct) {
+                    button.dataset.correct = answer.correct;
+                }
+                button.addEventListener('click', selectAnswer);
+                answerButtonsContainer.appendChild(button);
+            });
+        }
+
+        /**
+         * Resets the UI state before showing the next question.
+         */
+        function resetState() {
+            feedbackArea.innerText = '';
+            feedbackArea.classList.remove('text-green-400', 'text-red-400');
+            while (answerButtonsContainer.firstChild) {
+                answerButtonsContainer.removeChild(answerButtonsContainer.firstChild);
+            }
+        }
+
+        /**
+         * Handles the user's answer selection.
+         * @param {Event} e - The click event from the answer button.
+         */
+        function selectAnswer(e) {
+            clearInterval(timerInterval); // Stop the timer
+            const selectedBtn = e.target;
+            const isCorrect = selectedBtn.dataset.correct === 'true';
+
+            setStatusClass(selectedBtn, isCorrect);
+            Array.from(answerButtonsContainer.children).forEach(button => {
+                button.disabled = true; 
+                if (button.dataset.correct === 'true') {
+                    setStatusClass(button, true);
+                }
+            });
+
+            if (isCorrect) {
+                feedbackArea.innerText = '¡Correcto!';
+                feedbackArea.classList.add('text-green-400');
+                correctAnswersCount++;
+                revealSquares();
+            } else {
+                feedbackArea.innerText = 'Incorrecto';
+                feedbackArea.classList.add('text-red-400');
+            }
+            
+            updateProgress();
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                setNextQuestion();
+            }, 2000);
+        }
+        
+        /**
+         * Updates the progress bar based on correct answers.
+         */
+        function updateProgress() {
+            const percentage = (correctAnswersCount / questions.length) * 100;
+            progressBar.style.width = `${percentage}%`;
+            progressBar.textContent = `${Math.round(percentage)}%`;
+        }
+
+        /**
+         * Sets the visual style for a button based on whether the answer is correct or incorrect.
+         * @param {HTMLElement} element - The button element.
+         * @param {boolean} correct - True if the answer is correct.
+         */
+        function setStatusClass(element, correct) {
+            if (correct) {
+                element.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                element.classList.add('bg-green-600');
+            } else {
+                element.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                element.classList.add('bg-red-600');
+            }
+        }
+
+        /**
+         * Removes a set number of squares from the grid to reveal the image.
+         */
+        function revealSquares() {
+            const squaresToRemove = totalSquares / questions.length;
+            for (let i = 0; i < squaresToRemove; i++) {
+                const visibleSquares = gridSquares.filter(sq => !sq.classList.contains('hidden'));
+                if (visibleSquares.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * visibleSquares.length);
+                    visibleSquares[randomIndex].classList.add('hidden');
+                }
+            }
+        }
+        
+        /**
+         * Ends the game, showing the appropriate final screen.
+         */
+        function endGame() {
+            clearInterval(timerInterval); // Ensure timer stops at the end
+            
+            // Player won
+            if (correctAnswersCount === questions.length) {
+                quizContainer.classList.add('hidden');
+                successEndScreen.classList.remove('hidden');
+                finalScoreText.innerText = `Puntuación perfecta: ${correctAnswersCount} de ${questions.length}.`;
+                endGameMessage.innerText = "¡Felicidades! Has revelado la imagen por completo.";
+                gridSquares.forEach(square => square.classList.add('hidden'));
+            } else { // Player did not win
+                // Hide the main game container to show the full-width promo screen
+                mainGameArea.classList.add('hidden');
+                promoEndScreen.classList.remove('hidden');
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        restartBtnSuccess.addEventListener('click', startGame);
+        restartBtnPromo.addEventListener('click', startGame);
+
+        // --- INITIALIZE GAME ---
+        document.addEventListener('DOMContentLoaded', startGame);
+    </script>
+</body>
+</html>
